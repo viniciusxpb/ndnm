@@ -7,7 +7,10 @@
       "Bash(cargo run:*)",
       "Bash(cargo build:*)",
       "Bash(powershell -Command \"Get-Content test.ps1 | Select-Object -Skip 220 -First 15\")",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File stop-all.ps1)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File start-all.ps1)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

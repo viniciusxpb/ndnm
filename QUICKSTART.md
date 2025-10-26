@@ -1,6 +1,29 @@
 # 🚀 NDNM Quick Start Guide
 
-## Passo 1: Rodar o Node
+## Método 1: Script Automático (RECOMENDADO)
+
+### Iniciar tudo de uma vez:
+
+```powershell
+.\start-all.ps1
+```
+
+Isso vai:
+1. Abrir Hermes em uma janela
+2. Descobrir e abrir todos os nodes (cada um em sua janela)
+3. Salvar os PIDs para poder parar depois
+
+### Parar tudo:
+
+```powershell
+.\stop-all.ps1
+```
+
+---
+
+## Método 2: Manual (para debug)
+
+### Passo 1: Rodar o Node
 
 Abra um terminal e execute:
 
@@ -20,7 +43,7 @@ Starting node server on 0.0.0.0:3001
 
 ---
 
-## Passo 2: Rodar o Hermes
+### Passo 2: Rodar o Hermes
 
 Abra **OUTRO terminal** e execute:
 
@@ -42,7 +65,7 @@ Starting Hermes API server on 0.0.0.0:3000
 
 ---
 
-## Passo 3: Testar!
+## Testar o Sistema
 
 Abra **OUTRO terminal** (ou PowerShell) e rode os testes:
 
