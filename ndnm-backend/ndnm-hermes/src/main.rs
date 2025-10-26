@@ -29,10 +29,11 @@ use axum::{
     Json, Router,
 };
 use ndnm_libs::AppError;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing::info;
+use tracing::{info, warn};
 
 use discovery::DiscoveryService;
 use orchestrator::{GraphExecutionRequest, Orchestrator};
@@ -52,9 +53,120 @@ struct AppState {
 
 // === API Handlers ===
 
-/// Handler for GET /health - Health check endpoint
+/// Response structure for system health check
+#[derive(Debug, Serialize)]
+struct SystemHealthResponse {
+    /// Overall system status
+    status: String,
+    /// Hermes service status
+    hermes: ServiceStatus,
+    /// Status of all registered nodes
+    nodes: Vec<NodeHealthStatus>,
+}
+
+/// Service status information
+#[derive(Debug, Serialize)]
+struct ServiceStatus {
+    /// Is the service healthy?
+    healthy: bool,
+    /// Additional message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
+}
+
+/// Health status of a single node
+#[derive(Debug, Serialize)]
+struct NodeHealthStatus {
+    /// Node ID
+    node_id: String,
+    /// Node label
+    label: String,
+    /// Port the node is running on
+    port: u16,
+    /// Is the node responding?
+    healthy: bool,
+    /// Response time in milliseconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    response_time_ms: Option<u64>,
+    /// Error message if unhealthy
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+/// Handler for GET /health - Simple health check endpoint
 async fn health_check() -> StatusCode {
     StatusCode::OK
+}
+
+/// Handler for GET /health/all - Complete system health check
+///
+/// Checks Hermes and all registered nodes
+async fn health_check_all(State(state): State<AppState>) -> Json<SystemHealthResponse> {
+    info!("Performing system-wide health check");
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .unwrap();
+
+    let mut node_statuses = Vec::new();
+    let nodes = state.registry.get_all_nodes();
+
+    for node_info in nodes {
+        let start = std::time::Instant::now();
+        let url = format!("http://localhost:{}/health", node_info.port);
+
+        let status = match client.get(&url).send().await {
+            Ok(response) => {
+                let elapsed = start.elapsed();
+                if response.status().is_success() {
+                    NodeHealthStatus {
+                        node_id: node_info.node_id.clone(),
+                        label: node_info.config.label.clone(),
+                        port: node_info.port,
+                        healthy: true,
+                        response_time_ms: Some(elapsed.as_millis() as u64),
+                        error: None,
+                    }
+                } else {
+                    NodeHealthStatus {
+                        node_id: node_info.node_id.clone(),
+                        label: node_info.config.label.clone(),
+                        port: node_info.port,
+                        healthy: false,
+                        response_time_ms: Some(elapsed.as_millis() as u64),
+                        error: Some(format!("HTTP {}", response.status())),
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Health check failed for node {}: {}", node_info.node_id, e);
+                NodeHealthStatus {
+                    node_id: node_info.node_id.clone(),
+                    label: node_info.config.label.clone(),
+                    port: node_info.port,
+                    healthy: false,
+                    response_time_ms: None,
+                    error: Some(e.to_string()),
+                }
+            }
+        };
+
+        node_statuses.push(status);
+    }
+
+    // Determine overall status
+    let all_healthy = node_statuses.iter().all(|n| n.healthy);
+    let overall_status = if all_healthy { "healthy" } else { "degraded" };
+
+    Json(SystemHealthResponse {
+        status: overall_status.to_string(),
+        hermes: ServiceStatus {
+            healthy: true,
+            message: Some("Orchestrator running".to_string()),
+        },
+        nodes: node_statuses,
+    })
 }
 
 /// Handler for GET /nodes/registry - Get all registered nodes
@@ -124,6 +236,7 @@ async fn list_workspaces(
 fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health_check))
+        .route("/health/all", get(health_check_all))
         .route("/nodes/registry", get(get_node_registry))
         .route("/nodes/:node_id", get(get_node_info))
         .route("/graphs/run", post(execute_graph))

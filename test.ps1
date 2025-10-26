@@ -48,13 +48,56 @@ function Test-HealthNode {
 }
 
 function Test-HealthHermes {
-    Write-Host "Checking hermes health..." -ForegroundColor Cyan
+    Write-Host "Checking system health..." -ForegroundColor Cyan
+    Write-Host ""
+
     try {
-        $response = Invoke-RestMethod -Uri "$HermesUrl/health" -Method Get
-        Write-Host "Success - Hermes is healthy!" -ForegroundColor Green
+        $response = Invoke-RestMethod -Uri "$HermesUrl/health/all" -Method Get
+
+        # Show Hermes status
+        Write-Host "Hermes Orchestrator:" -ForegroundColor Yellow
+        if ($response.hermes.healthy) {
+            Write-Host "  Status: Healthy" -ForegroundColor Green
+            if ($response.hermes.message) {
+                Write-Host "  Message: $($response.hermes.message)" -ForegroundColor Gray
+            }
+        } else {
+            Write-Host "  Status: Unhealthy" -ForegroundColor Red
+        }
+        Write-Host ""
+
+        # Show overall status
+        Write-Host "Overall System Status: $($response.status.ToUpper())" -ForegroundColor $(if ($response.status -eq "healthy") { "Green" } else { "Yellow" })
+        Write-Host ""
+
+        # Show individual node statuses
+        Write-Host "Registered Nodes:" -ForegroundColor Yellow
+        foreach ($node in $response.nodes) {
+            $statusColor = if ($node.healthy) { "Green" } else { "Red" }
+            $statusText = if ($node.healthy) { "[OK]" } else { "[FAIL]" }
+
+            Write-Host "  $statusText $($node.label)" -ForegroundColor $statusColor
+            Write-Host "    Port: $($node.port)" -ForegroundColor Gray
+
+            if ($node.response_time_ms) {
+                Write-Host "    Response Time: $($node.response_time_ms)ms" -ForegroundColor Gray
+            }
+
+            if ($node.error) {
+                Write-Host "    Error: $($node.error)" -ForegroundColor Red
+            }
+            Write-Host ""
+        }
+
+        # Summary
+        $healthyCount = ($response.nodes | Where-Object { $_.healthy }).Count
+        $totalCount = $response.nodes.Count
+        Write-Host "Summary: $healthyCount/$totalCount nodes healthy" -ForegroundColor Cyan
+
     } catch {
         Write-Host "Error - Hermes is not responding" -ForegroundColor Red
         Write-Host "  Make sure it's running with: cargo run -p ndnm-hermes" -ForegroundColor Yellow
+        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
