@@ -11,7 +11,10 @@
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File stop-all.ps1)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File start-all.ps1)",
       "Bash(powershell:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(Remove-Item \"C:\\Projetos\\new\\ndnm\\ndnm-argos\\CLAUDE.md\" -Force)",
+      "Bash(Remove-Item \"C:\\Projetos\\new\\ndnm\\ndnm-argos\\AAA_LAIN_MANIFESTO_V3.md\" -Force)",
+      "Bash(Remove-Item \"C:\\Projetos\\new\\ndnm\\ndnm-argos\\AAA_LAIN_MANIFESTO_V2.md\" -Force)"
     ],
     "deny": [],
     "ask": []
