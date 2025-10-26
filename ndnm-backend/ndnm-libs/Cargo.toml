@@ -4,3 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+
+# Async trait support
+async-trait = "0.1"
+
+# Error handling
+thiserror = "1.0"
+
+# Web framework types (for future HTTP utilities)
+axum = "0.7"
+tokio = { version = "1.0", features = ["full"] }
