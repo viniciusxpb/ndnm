@@ -22,3 +22,4 @@ error.log
 .DS_Store
 Thumbs.db
 .ndnm-pids.txt
+.aider*
