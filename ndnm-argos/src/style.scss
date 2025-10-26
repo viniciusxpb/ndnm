@@ -1,0 +1,160 @@
+@use "sass:color";
+
+// src/style.scss
+$font: "Courier New", monospace;
+$green: #00ff88; // neon
+$green-soft: #00d47a;
+$edge-green: #00ff00;
+$bg: #050505; // quase preto
+$bg-panel: #0b0f0c;
+$text: #c8ffdf;
+$grid: rgba(0, 255, 136, 0.06);
+$shadow-neon: 0 0 12px rgba(0, 255, 136, 0.5), 0 0 32px rgba(0, 255, 136, 0.25);
+$green-border: color.adjust($green, $lightness: -40%);
+
+// Dimensões
+$radius: 16px;
+$pad: 12px;
+$border: 1px;
+
+// Cyberpunk Selection Vars (copiadas do hacker.scss)
+$selection-glow-color: #00ff88;
+$selection-glow-intense: #00ffff;
+$selection-circuit-color: rgba(0, 255, 136, 0.6);
+
+.hacker-node {
+  border: 2px solid #00ff00;
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+}
+
+
+body {
+  background-color: $bg;
+  color: $green;
+  font-family: $font;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.app {
+  text-align: center;
+
+  h1 {
+    font-size: 2.5rem;
+    text-shadow: 0 0 10px $green;
+  }
+}
+
+//temporario-usarei depois
+.dark .react-flow__node {
+  
+}
+ 
+.light .react-flow__node {
+  
+}
+
+.react-flow__edge-path {
+  stroke: $edge-green !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 8px rgba(0,255,136,0.6));
+}
+
+.react-flow__edge-text {
+  fill: $edge-green !important;
+  font-family: "Courier New", monospace;
+}
+
+.react-flow__handle {
+  width: 5px;
+  height: 5px;
+  background: $green;
+  border: 1px solid $green-border;
+  border-radius: 50%;
+  box-shadow: $shadow-neon;
+}
+
+.react-flow__handle-left {
+  background: $green-soft;
+}
+
+.react-flow__handle-right {
+  background: $green;
+}
+
+.globalWrapper{
+  display: flex;
+}
+
+.leftPanel{
+width: 20vw;
+height: 100vh;
+}
+
+.mainBoard{
+  width: 72vw;
+  height: 100vh;
+}
+
+.hacker-panel{
+  border: 2px solid #00ff00;
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+}
+
+.react-flow__node.selected {
+  .hacker-node {
+    position: relative;
+    border-color: $green !important;
+    background: rgba(0, 255, 0, 0.15) !important;
+    animation: circuit-burst 0.8s ease-out forwards,
+               pulse-border 2s ease-in-out infinite 0.8s;
+    overflow: visible;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      background:
+        linear-gradient(45deg, transparent 30%, $selection-circuit-color 30%, $selection-circuit-color 35%, transparent 35%),
+        linear-gradient(-45deg, transparent 30%, $selection-circuit-color 30%, $selection-circuit-color 35%, transparent 35%),
+        linear-gradient(90deg, transparent 48%, $selection-circuit-color 48%, $selection-circuit-color 52%, transparent 52%),
+        linear-gradient(0deg, transparent 48%, $selection-circuit-color 48%, $selection-circuit-color 52%, transparent 52%);
+      background-size: 20px 20px, 20px 20px, 60px 60px, 60px 60px;
+      background-position: 0 0, 0 0, 0 0, 0 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      animation: circuit-lines-expand 0.8s ease-out forwards;
+      z-index: -1;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 136, 0.03) 2px,
+        rgba(0, 255, 136, 0.03) 4px
+      );
+      pointer-events: none;
+      animation: glitch-lines 0.8s ease-in-out;
+      border-radius: inherit;
+    }
+  }
+}

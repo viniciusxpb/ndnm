@@ -1,0 +1,443 @@
+/* ===================== */
+/* 💾 Vars (tema hacker) */
+/* ===================== */
+@use "sass:color";
+
+$font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+$color-fg: #b7f397;
+$color-accent: #00ff99;
+$color-accent-2: #00ffcc;
+$color-accent-dim: #00ff6633;
+$color-accent-scan: #00ff9966;
+
+$bg-root: #0b0f0c;
+$bg-panel: #061108;
+$bg-left: #060a07;
+$bg-btn: #0b1c10;
+$bg-btn-hover: #001a12;
+
+$border-strong: #1f5329;
+$border-dim: #17351c;
+
+$overlay: rgba(0, 10, 0, 0.65);
+
+$shadow-1: 0 8px 28px rgba(0, 0, 0, 0.6);
+$shadow-2: 0 12px 40px rgba(0, 0, 0, 0.65);
+
+$sp-1: 6px;
+$sp-2: 8px;
+$sp-3: 10px;
+$sp-4: 12px;
+$sp-5: 16px;
+
+$r-1: 8px;
+$r-2: 10px;
+$r-3: 12px;
+$r-4: 16px;
+
+$t-fast: 0.06s;
+$t-med: 0.12s;
+$t-slow: 0.2s;
+
+/* ================================ */
+/* 🔥 Cyberpunk Selection Vars     */
+/* ================================ */
+$selection-burst-duration: 0.8s;
+$selection-pulse-duration: 2s;
+$selection-glow-color: #00ff88;
+$selection-glow-intense: #00ffff;
+$selection-circuit-color: rgba(0, 255, 136, 0.6);
+
+/* ============== */
+/* 🔧 Mixins util */
+/* ============== */
+@mixin card {
+  background: $bg-panel;
+  border: 1px solid $border-strong;
+  border-radius: $r-3;
+  box-shadow: $shadow-1;
+}
+
+@mixin focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba($color: $border-strong, $alpha: 0.4);
+}
+
+/* ========= */
+/* layout    */
+/* ========= */
+.globalWrapper {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+  background: $bg-root;
+  color: $color-fg;
+  font-family: $font-mono;
+}
+
+.leftPanel {
+  border-right: 1px solid $border-dim;
+  padding: $sp-4;
+  background: $bg-left;
+}
+
+.mainBoard {
+  position: relative;
+}
+
+/* ===== */
+/* btns  */
+/* ===== */
+.hacker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $sp-2;
+  padding: $sp-2 $sp-4;
+  border-radius: $r-2;
+  border: 1px solid $border-strong;
+  background: $bg-btn;
+  color: $color-fg;
+  cursor: pointer;
+  transition: transform $t-fast ease, box-shadow $t-med ease, background $t-slow;
+  user-select: none;
+
+  &:hover {
+    box-shadow: 0 0 0 2px rgba($color: $border-strong, $alpha: 0.4);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &.ghost {
+    background: transparent;
+    border-color: $border-strong;
+    color: color.scale($color-fg, $lightness: -10%);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+/* ================= */
+/* reactflow panel   */
+/* ================= */
+.hacker-panel {
+  @include card;
+  padding: $sp-3;
+  min-width: 180px;
+}
+
+/* ====== */
+/* modal  */
+/* ====== */
+.hacker-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: $overlay;
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.hacker-modal {
+  width: min(92vw, 560px);
+  @include card;
+  border-radius: $r-4;
+  box-shadow: $shadow-2;
+  outline: none;
+
+  &-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $sp-4 $sp-3;
+    border-bottom: 1px solid $border-dim;
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      color: $color-fg;
+    }
+  }
+
+  &-body {
+    padding: $sp-5;
+  }
+
+  &-grid {
+    display: grid;
+    gap: $sp-3;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ===== */
+/* nodes */
+/* ===== */
+.hacker-node {
+  @include card;
+  padding: $sp-2 $sp-3;
+  color: $color-fg;
+}
+
+/* ================= */
+/* themed icon btn   */
+/* ================= */
+.xy-theme__button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 48px;
+  height: 48px;
+  padding: $sp-1;
+  border: 1px solid $color-accent;
+  border-radius: $r-1;
+  background: #000;
+  color: $color-accent;
+  cursor: pointer;
+
+  box-shadow: 0 0 6px rgba($color: $color-accent, $alpha: 0.67),
+    inset 0 0 6px rgba($color: $color-accent, $alpha: 0.33);
+  transition: all 0.15s ease-in-out;
+  overflow: hidden;
+
+  img {
+    max-width: 24px;
+    max-height: 24px;
+    pointer-events: none;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(transparent, $color-accent-scan, transparent);
+    animation: xy-scan 2s linear infinite;
+  }
+
+  &:hover {
+    background: $bg-btn-hover;
+    box-shadow: 0 0 12px $color-accent-2, inset 0 0 12px $color-accent-dim;
+    transform: translateY(-2px) scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 4px $color-accent;
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+/* ========= */
+/* keyframes */
+/* ========= */
+@keyframes xy-scan {
+  0% {
+    top: -100%;
+  }
+  100% {
+    top: 200%;
+  }
+}
+
+/* ================================ */
+/* 🔥 Cyberpunk Selection Keyframes */
+/* ================================ */
+@keyframes circuit-burst {
+  0% {
+    box-shadow: 0 0 5px $selection-glow-color,
+                0 0 10px $selection-glow-color,
+                inset 0 0 5px $selection-glow-color;
+    transform: scale(1);
+  }
+  15% {
+    box-shadow: 0 0 15px $selection-glow-intense,
+                0 0 30px $selection-glow-color,
+                0 0 45px $selection-glow-color,
+                inset 0 0 15px $selection-glow-intense;
+    transform: scale(1.02);
+  }
+  30% {
+    box-shadow: 0 0 25px $selection-glow-intense,
+                0 0 50px $selection-glow-color,
+                0 0 75px $selection-glow-color,
+                0 0 100px rgba(0, 255, 136, 0.3),
+                inset 0 0 25px $selection-glow-intense;
+    transform: scale(1.03);
+  }
+  50% {
+    box-shadow: 0 0 30px $selection-glow-intense,
+                0 0 60px $selection-glow-color,
+                0 0 90px $selection-glow-color,
+                0 0 120px rgba(0, 255, 136, 0.2),
+                inset 0 0 30px $selection-glow-intense,
+                inset 0 0 50px rgba(0, 255, 255, 0.3);
+    transform: scale(1.04);
+  }
+  70% {
+    box-shadow: 0 0 20px $selection-glow-color,
+                0 0 40px $selection-glow-color,
+                inset 0 0 20px $selection-glow-color;
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 8px $selection-glow-color,
+                0 0 16px $selection-glow-color,
+                inset 0 0 8px rgba(0, 255, 136, 0.2);
+    transform: scale(1);
+  }
+}
+
+@keyframes circuit-lines-expand {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1) rotate(2deg);
+  }
+  40% {
+    opacity: 0.8;
+    transform: scale(1.3) rotate(-1deg);
+  }
+  60% {
+    opacity: 0.6;
+    transform: scale(1.5) rotate(1deg);
+  }
+  80% {
+    opacity: 0.3;
+    transform: scale(1.8) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2) rotate(0deg);
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    box-shadow: 0 0 8px $selection-glow-color,
+                0 0 16px $selection-glow-color,
+                inset 0 0 8px rgba(0, 255, 136, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 12px $selection-glow-color,
+                0 0 24px $selection-glow-color,
+                inset 0 0 12px rgba(0, 255, 136, 0.3);
+  }
+}
+
+@keyframes glitch-lines {
+  0%, 100% {
+    clip-path: inset(0 0 0 0);
+    transform: translateX(0);
+  }
+  10% {
+    clip-path: inset(10% 0 85% 0);
+    transform: translateX(-2px);
+  }
+  20% {
+    clip-path: inset(70% 0 15% 0);
+    transform: translateX(2px);
+  }
+  30% {
+    clip-path: inset(30% 0 60% 0);
+    transform: translateX(-1px);
+  }
+  40% {
+    clip-path: inset(0 0 0 0);
+    transform: translateX(0);
+  }
+}
+
+/* ==================== */
+/* pinned play buttons  */
+/* ==================== */
+.pinned-play-container {
+  position: fixed;
+  top: $sp-4;
+  right: $sp-4;
+  @include card;
+  min-width: 200px;
+  max-width: 300px;
+  z-index: 1000;
+  box-shadow: $shadow-2;
+}
+
+.pinned-play-header {
+  padding: $sp-3;
+  border-bottom: 1px solid $border-dim;
+  font-size: 14px;
+  font-weight: bold;
+  color: $color-accent;
+}
+
+.pinned-play-nodes {
+  padding: $sp-3;
+  display: flex;
+  flex-direction: column;
+  gap: $sp-3;
+}
+
+.pinned-node-wrapper {
+  position: relative;
+  @include card;
+  padding: $sp-3;
+  transition: all $t-med ease;
+
+  &:hover {
+    box-shadow: 0 0 12px rgba($color: $color-accent, $alpha: 0.4);
+    transform: translateX(-2px);
+  }
+}
+
+.pinned-close-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid $border-dim;
+  background: rgba(0, 0, 0, 0.9);
+  color: color.scale($color-fg, $lightness: -20%);
+  cursor: pointer;
+  transition: all $t-fast ease;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+
+  &:hover {
+    background: rgba(255, 0, 0, 0.8);
+    border-color: #ff3333;
+    color: #fff;
+    transform: scale(1.1);
+  }
+}
+
+.pinned-node-mini {
+  min-width: 120px;
+}
+
+.pinned-node-label {
+  font-family: $font-mono;
+  font-size: 13px;
+  font-weight: bold;
+  color: $color-accent;
+  text-align: center;
+}
