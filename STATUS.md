@@ -90,11 +90,23 @@ Summary: 1/1 nodes healthy
 
 ### ✅ Todos os testes unitários passando
 ```
-ndnm-libs:   10 tests passed
-node-file-browser: 4 tests passed
-ndnm-hermes: 11 tests passed
-TOTAL: 25 tests passed ✅
+ndnm-libs:         10 tests passed
+node-file-browser:  4 tests passed
+ndnm-hermes:       11 tests passed
+ndnm-brazil:        2 tests passed
+TOTAL: 27 tests passed ✅
 ```
+
+### ✅ Suite de testes de integração
+```powershell
+.\test.ps1 integration-test
+```
+Testa:
+1. Health checks de todos os serviços
+2. Criação de arquivos via node
+3. Verificação de persistência
+4. Execução de grafo via Hermes
+5. Health check completo do sistema
 
 ---
 
@@ -120,12 +132,24 @@ TOTAL: 25 tests passed ✅
 
 ---
 
-## 🚧 O que NÃO está implementado (ainda)
+#### 4. `ndnm-brazil` - Backend-for-Frontend 🇧🇷
+- ✅ HTTP API proxy para Hermes
+- ✅ WebSocket server para frontend
+- ✅ Broadcaster para múltiplos clientes
+- ✅ Relay de comandos Argos → Hermes
+- ✅ **2 testes passando**
+- ✅ API completa:
+  - `GET /health` - Health check + status Hermes
+  - `GET /ws` - WebSocket endpoint
+  - `GET /nodes/registry` - Proxy para Hermes
+  - `POST /graphs/run` - Executa grafo via Hermes
+  - `POST /nexus/save` - Salva workspace
+  - `GET /nexus/list` - Lista workspaces
+  - `GET /nexus/load/{name}` - Carrega workspace
 
-### ⏳ `ndnm-brazil` (BFF)
-- WebSocket server
-- Comunicação com frontend
-- Relay de mensagens entre Argos e Hermes
+---
+
+## 🚧 O que NÃO está implementado (ainda)
 
 ### ⏳ `ndnm-exdoida` (Observability)
 - Sistema de logs agregado
@@ -147,35 +171,48 @@ TOTAL: 25 tests passed ✅
 ## 📋 Arquitetura Atual
 
 ```
-┌─────────────────────────────────────────┐
-│         ndnm-hermes (Port 3000)         │
-│  - Descobre nodes                       │
-│  - Health checks                        │
-│  - Orquestra execução                   │
-│  - Gerencia workspaces                  │
-└─────────────────┬───────────────────────┘
-                  │
-                  │ HTTP
-                  │
-        ┌─────────┴─────────┐
-        │                   │
-        v                   v
-┌───────────────┐   ┌───────────────┐
-│ node-file-    │   │ (outros       │
-│ browser       │   │  nodes)       │
-│ Port 3001     │   │ Port 3002+    │
-└───────────────┘   └───────────────┘
+      ┌──────────────────────────────────┐
+      │   ndnm-argos (Frontend)          │
+      │   (future)                       │
+      └──────────────┬───────────────────┘
+                     │ WebSocket
+                     v
+      ┌──────────────────────────────────┐
+      │   ndnm-brazil (Port 3002) 🇧🇷     │
+      │   - WebSocket server             │
+      │   - BFF / API Gateway            │
+      │   - Broadcast to clients         │
+      └──────────────┬───────────────────┘
+                     │ HTTP
+                     v
+      ┌──────────────────────────────────┐
+      │   ndnm-hermes (Port 3000)        │
+      │   - Descobre nodes               │
+      │   - Health checks                │
+      │   - Orquestra execução           │
+      │   - Gerencia workspaces          │
+      └──────────────┬───────────────────┘
+                     │ HTTP
+           ┌─────────┴─────────┐
+           │                   │
+           v                   v
+    ┌───────────────┐   ┌───────────────┐
+    │ node-file-    │   │ (outros       │
+    │ browser       │   │  nodes)       │
+    │ Port 3001     │   │ Port 3003+    │
+    └───────────────┘   └───────────────┘
 ```
 
 ---
 
 ## 📈 Próximos Passos Sugeridos
 
-1. **Implementar `ndnm-brazil`** (BFF com WebSocket)
+1. **~~Implementar `ndnm-brazil`~~** ✅ CONCLUÍDO!
 2. **Implementar `ndnm-exdoida`** (Observability)
 3. **Lifecycle Management** (Hermes gerencia processos)
 4. **Criar mais nodes** de exemplo
 5. **Frontend `ndnm-argos`**
+6. **Testes E2E** completos com WebSocket
 
 ---
 
@@ -186,7 +223,14 @@ O sistema base está **100% funcional e testado**:
 - ✅ Health checks funcionam
 - ✅ Execução de grafos funciona
 - ✅ Workspace persistence funciona
+- ✅ **BFF com WebSocket funciona** 🇧🇷
 - ✅ Scripts de automação funcionam
-- ✅ 25 testes passando
+- ✅ Suite de testes de integração
+- ✅ **27 testes passando**
 
-**Pronto para desenvolvimento dos próximos módulos!** 🚀
+**Arquitetura completa (exceto frontend e observability)!** 🚀
+
+Faltam apenas:
+- `ndnm-exdoida` (observability - opcional)
+- `ndnm-argos` (frontend)
+- Lifecycle management automático (nice-to-have)

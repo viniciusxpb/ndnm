@@ -54,9 +54,19 @@ if ($hermesPid) {
 }
 Start-Sleep -Seconds 2
 
+# Start Brazil BFF
+Write-Host ""
+Write-Host "Step 2: Starting Brazil BFF" -ForegroundColor Cyan
+Write-Host "============================" -ForegroundColor Cyan
+$brazilPid = Start-Service -Name "Brazil" -WorkingDir $BackendDir -Command "cargo run -p ndnm-brazil"
+if ($brazilPid) {
+    $pids += $brazilPid
+}
+Start-Sleep -Seconds 2
+
 # Discover nodes
 Write-Host ""
-Write-Host "Step 2: Discovering and Starting Nodes" -ForegroundColor Cyan
+Write-Host "Step 3: Discovering and Starting Nodes" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 
 $nodesDir = Join-Path $BackendDir "nodes"
@@ -90,6 +100,7 @@ Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Services running:" -ForegroundColor Yellow
 Write-Host "  - Hermes: http://localhost:3000" -ForegroundColor White
+Write-Host "  - Brazil: http://localhost:3002 (WebSocket: ws://localhost:3002/ws)" -ForegroundColor White
 Write-Host "  - Nodes: Check individual windows" -ForegroundColor White
 Write-Host ""
 Write-Host "To test the system:" -ForegroundColor Yellow

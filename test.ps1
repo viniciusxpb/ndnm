@@ -34,6 +34,9 @@ function Show-Help {
     Write-Host "  .\test.ps1 list-workspaces - List all workspaces"
     Write-Host "  .\test.ps1 load-workspace  - Load test workspace"
     Write-Host ""
+    Write-Host "Integration:" -ForegroundColor Yellow
+    Write-Host "  .\test.ps1 integration-test - Run full integration test suite"
+    Write-Host ""
 }
 
 function Test-HealthNode {
@@ -261,6 +264,157 @@ function Load-TestWorkspace {
     }
 }
 
+function Run-IntegrationTest {
+    Write-Host "=======================================" -ForegroundColor Cyan
+    Write-Host "NDNM Integration Test" -ForegroundColor Cyan
+    Write-Host "=======================================" -ForegroundColor Cyan
+    Write-Host ""
+
+    $testsPassed = 0
+    $testsFailed = 0
+
+    # Test 1: Health checks
+    Write-Host "[Test 1] Checking if services are running..." -ForegroundColor Yellow
+    try {
+        $hermesHealth = Invoke-RestMethod -Uri "$HermesUrl/health" -Method Get -ErrorAction Stop
+        $nodeHealth = Invoke-RestMethod -Uri "$NodeUrl/health" -Method Get -ErrorAction Stop
+        Write-Host "  [PASS] Services are running" -ForegroundColor Green
+        $testsPassed++
+    } catch {
+        Write-Host "  [FAIL] Services not responding" -ForegroundColor Red
+        Write-Host "  Make sure you ran: .\start-all.ps1" -ForegroundColor Yellow
+        $testsFailed++
+        return
+    }
+
+    # Test 2: Create a file
+    Write-Host ""
+    Write-Host "[Test 2] Creating test file via node..." -ForegroundColor Yellow
+    $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+    $testFileName = "integration_test_$timestamp.txt"
+    $testContent = "Integration test file created at $(Get-Date)"
+
+    $body = @{
+        inputs = @{
+            copy_input_0 = @{
+                filename = $testFileName
+                content = $testContent
+            }
+        }
+    } | ConvertTo-Json -Depth 10
+
+    try {
+        $response = Invoke-RestMethod -Uri "$NodeUrl/run" -Method Post -Body $body -ContentType "application/json"
+
+        if ($response.outputs.copied_output_0) {
+            Write-Host "  [PASS] File created successfully" -ForegroundColor Green
+            $testsPassed++
+        } else {
+            Write-Host "  [FAIL] File created but no output returned" -ForegroundColor Red
+            $testsFailed++
+        }
+    } catch {
+        Write-Host "  [FAIL] Failed to create file: $($_.Exception.Message)" -ForegroundColor Red
+        $testsFailed++
+    }
+
+    # Test 3: List files and verify
+    Write-Host ""
+    Write-Host "[Test 3] Verifying file exists in node..." -ForegroundColor Yellow
+    try {
+        $files = Invoke-RestMethod -Uri "$NodeUrl/list" -Method Get
+
+        if ($files.files -contains $testFileName) {
+            Write-Host "  [PASS] File found in node listing" -ForegroundColor Green
+            $testsPassed++
+        } else {
+            Write-Host "  [FAIL] File not found in listing" -ForegroundColor Red
+            Write-Host "  Expected: $testFileName" -ForegroundColor Gray
+            Write-Host "  Found: $($files.files -join ', ')" -ForegroundColor Gray
+            $testsFailed++
+        }
+    } catch {
+        Write-Host "  [FAIL] Failed to list files: $($_.Exception.Message)" -ForegroundColor Red
+        $testsFailed++
+    }
+
+    # Test 4: Execute graph via Hermes
+    Write-Host ""
+    Write-Host "[Test 4] Executing graph via Hermes..." -ForegroundColor Yellow
+    $graphBody = @{
+        graph = @{
+            nodes = @(
+                @{
+                    instance_id = "test_node_1"
+                    node_type_id = "hash_sha256_de_viniciusxpb_node-file-browser"
+                    input_values = @{
+                        target_directory = "./managed_files"
+                    }
+                }
+            )
+            connections = @()
+        }
+    } | ConvertTo-Json -Depth 10
+
+    try {
+        $graphResult = Invoke-RestMethod -Uri "$HermesUrl/graphs/run" -Method Post -Body $graphBody -ContentType "application/json"
+
+        if ($graphResult.status -eq "success") {
+            Write-Host "  [PASS] Graph executed successfully" -ForegroundColor Green
+            $testsPassed++
+        } else {
+            Write-Host "  [FAIL] Graph execution failed: $($graphResult.error)" -ForegroundColor Red
+            $testsFailed++
+        }
+    } catch {
+        Write-Host "  [FAIL] Failed to execute graph: $($_.Exception.Message)" -ForegroundColor Red
+        $testsFailed++
+    }
+
+    # Test 5: Health check all via Hermes
+    Write-Host ""
+    Write-Host "[Test 5] Checking system health via Hermes..." -ForegroundColor Yellow
+    try {
+        $healthAll = Invoke-RestMethod -Uri "$HermesUrl/health/all" -Method Get
+
+        $allHealthy = $true
+        foreach ($node in $healthAll.nodes) {
+            if (-not $node.healthy) {
+                $allHealthy = $false
+                break
+            }
+        }
+
+        if ($allHealthy -and $healthAll.status -eq "healthy") {
+            Write-Host "  [PASS] All nodes healthy" -ForegroundColor Green
+            $testsPassed++
+        } else {
+            Write-Host "  [FAIL] Some nodes unhealthy" -ForegroundColor Red
+            $testsFailed++
+        }
+    } catch {
+        Write-Host "  [FAIL] Failed to check health: $($_.Exception.Message)" -ForegroundColor Red
+        $testsFailed++
+    }
+
+    # Summary
+    Write-Host ""
+    Write-Host "=======================================" -ForegroundColor Cyan
+    Write-Host "Test Results" -ForegroundColor Cyan
+    Write-Host "=======================================" -ForegroundColor Cyan
+    $totalTests = $testsPassed + $testsFailed
+    Write-Host "Total Tests: $totalTests" -ForegroundColor White
+    Write-Host "Passed: $testsPassed" -ForegroundColor Green
+    Write-Host "Failed: $testsFailed" -ForegroundColor Red
+    Write-Host ""
+
+    if ($testsFailed -eq 0) {
+        Write-Host "SUCCESS - All integration tests passed!" -ForegroundColor Green
+    } else {
+        Write-Host "FAILURE - Some tests failed" -ForegroundColor Red
+    }
+}
+
 # Execute command
 switch ($Command.ToLower()) {
     "health-node" { Test-HealthNode }
@@ -273,5 +427,7 @@ switch ($Command.ToLower()) {
     "save-workspace" { Save-TestWorkspace }
     "list-workspaces" { List-Workspaces }
     "load-workspace" { Load-TestWorkspace }
+    "integration-test" { Run-IntegrationTest }
     default { Show-Help }
 }
+

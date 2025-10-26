@@ -10,7 +10,8 @@
       "Bash(powershell -Command:*)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File stop-all.ps1)",
       "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File start-all.ps1)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
