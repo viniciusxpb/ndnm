@@ -1,0 +1,17 @@
+# ndnm-backend/Cargo.toml
+# Define o workspace do backend
+
+[workspace]
+members = [
+    # Módulos principais
+    "ndnm-libs",
+    "ndnm-brazil",
+    "ndnm-hermes",
+    "ndnm-exdoida",
+
+    # Pasta que contém todos os nodes individuais
+    "nodes/*",
+]
+
+# Usamos o resolver "2" pra ter as features mais recentes de dependência do Cargo
+resolver = "2"

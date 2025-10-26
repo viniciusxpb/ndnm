@@ -1,0 +1,23 @@
+# Rust / Cargo
+# Ignora diretórios 'target' em qualquer nível (incluindo ndnm-backend/target/)
+target/
+
+# Ignora o arquivo de configuração local do Cargo, se houver
+.cargo/config.toml
+
+# Arquivos de IDE (VSCode)
+.vscode/
+
+# Arquivos de ambiente - NUNCA comite segredos!
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+debug.log
+error.log
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db

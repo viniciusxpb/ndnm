@@ -1,0 +1,61 @@
+# ndnm-backend\nodes\node-file-browser\config.yaml
+
+# --- Identidade ---
+node_id_hash: "hash_sha256_de_viniciusxpb_node-file-browser" # ID único determinístico
+label: "📂 Gerenciador de Arquivos (Dinâmico)" # Nome para a UI
+node_type: "filesystem" # Categoria funcional
+
+# --- Seções de I/O (Grupos de Slots com Comportamentos Específicos) ---
+sections:
+  # --- SEÇÃO 1: Adicionar/Copiar Arquivos PARA a Pasta ---
+  - section_name: "copy_here" # ID interno da seção
+    section_label: "Copiar Para Cá" # Agrupador visual na UI (opcional)
+    behavior: "auto_increment" # UI adiciona mais slots deste template quando um é conectado
+    slot_template: # Descreve UM PAR de input/output vinculado
+      # -- Parte INPUT do par --
+      input:
+        name: "copy_input" # Nome base para handles de entrada (ex: copy_input_0, copy_input_1)
+        label: "Novo Arquivo" # Label de cada slot de entrada criado
+        type: "FILE_CONTENT" # O que ele espera: Conteúdo de 1 arquivo
+        connections: 1 # EXPLICITANDO: Só 1 fio pode entrar em cada handle gerado
+
+      # -- Parte OUTPUT vinculada a ESTA ação de input --
+      output:
+        name: "copied_output" # Nome base para handles de saída (ex: copied_output_0, copied_output_1)
+        label: "Arquivo Copiado" # Label de cada slot de saída vinculado à ação de cópia
+        type: "FILE_CONTENT" # O que ele fornece: Conteúdo do arquivo que acabou de ser copiado/salvo
+        connections: "n" # EXPLICITANDO: 0 a N fios podem sair deste handle
+
+  # --- SEÇÃO 2: Expor Arquivos INTERNOS da Pasta (Ler/Sobrescrever) ---
+  - section_name: "internal_files" # ID interno da seção
+    section_label: "Arquivos na Pasta" # Agrupador visual na UI (opcional)
+    behavior: "dynamic_per_file" # UI/Hermes gera um PAR de slots (in/out) para cada arquivo encontrado
+    slot_template: # Descreve o PAR de input/output por arquivo
+      # -- Parte INPUT do par (para Sobrescrever o arquivo existente) --
+      input:
+        # O 'name' REAL será dinâmico, baseado no nome do arquivo (ex: internal_input_nomedoarquivo.txt)
+        name: "internal_input" # Nome base (implementação adiciona o nome do arquivo)
+        label: "Substituir {filename}" # Mostra nome do arquivo no label (template)
+        type: "FILE_CONTENT" # Espera o novo conteúdo para sobrescrever
+        connections: 1 # Só aceita 1 conexão para sobrescrever
+
+      # -- Parte OUTPUT do par (para Ler o arquivo existente) --
+      output:
+        # O 'name' REAL será dinâmico, baseado no nome do arquivo (ex: internal_output_nomedoarquivo.txt)
+        name: "internal_output" # Nome base (implementação adiciona o nome do arquivo)
+        label: "{filename}" # Mostra nome do arquivo no label (template)
+        type: "FILE_CONTENT" # Fornece o conteúdo daquele arquivo específico
+        connections: "n" # Pode ser conectado a múltiplos nós
+
+# --- Controles Internos (Interface Nativa dentro do Node) ---
+input_fields:
+  # Campo para o usuário definir a pasta que este node vai "olhar"
+  - name: "target_directory"
+    label: "Pasta Gerenciada"
+    type: "text" # Futuramente: "directory_picker"
+
+  # Botão para forçar a releitura da pasta e atualização dos slots dinâmicos
+  - name: "refresh_button"
+    label: "Atualizar Visualização"
+    type: "button"
+# SEM 'port'! Hermes cuidará disso.
