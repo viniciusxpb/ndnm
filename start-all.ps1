@@ -64,9 +64,19 @@ if ($brazilPid) {
 }
 Start-Sleep -Seconds 2
 
+# Start Exdoida Observability
+Write-Host ""
+Write-Host "Step 3: Starting Exdoida Observability" -ForegroundColor Cyan
+Write-Host "=======================================" -ForegroundColor Cyan
+$exdoidaPid = Start-Service -Name "Exdoida" -WorkingDir $BackendDir -Command "cargo run -p ndnm-exdoida"
+if ($exdoidaPid) {
+    $pids += $exdoidaPid
+}
+Start-Sleep -Seconds 2
+
 # Discover nodes
 Write-Host ""
-Write-Host "Step 3: Discovering and Starting Nodes" -ForegroundColor Cyan
+Write-Host "Step 4: Discovering and Starting Nodes" -ForegroundColor Cyan
 Write-Host "=======================================" -ForegroundColor Cyan
 
 $nodesDir = Join-Path $BackendDir "nodes"
@@ -101,6 +111,7 @@ Write-Host ""
 Write-Host "Services running:" -ForegroundColor Yellow
 Write-Host "  - Hermes: http://localhost:3000" -ForegroundColor White
 Write-Host "  - Brazil: http://localhost:3002 (WebSocket: ws://localhost:3002/ws)" -ForegroundColor White
+Write-Host "  - Exdoida: http://localhost:3003 (UDP Logs: port 9514)" -ForegroundColor White
 Write-Host "  - Nodes: Check individual windows" -ForegroundColor White
 Write-Host ""
 Write-Host "To test the system:" -ForegroundColor Yellow

@@ -94,7 +94,8 @@ ndnm-libs:         10 tests passed
 node-file-browser:  4 tests passed
 ndnm-hermes:       11 tests passed
 ndnm-brazil:        2 tests passed
-TOTAL: 27 tests passed ✅
+ndnm-exdoida:      10 tests passed
+TOTAL: 37 tests passed ✅
 ```
 
 ### ✅ Suite de testes de integração
@@ -149,12 +150,22 @@ Testa:
 
 ---
 
-## 🚧 O que NÃO está implementado (ainda)
+#### 5. `ndnm-exdoida` - Observability System 👀
+- ✅ Fire-and-forget UDP log receiver (port 9514)
+- ✅ HTTP API for querying logs
+- ✅ In-memory log storage with circular buffer
+- ✅ Log filtering by level and source
+- ✅ Metrics aggregation endpoint
+- ✅ **10 tests passing**
+- ✅ API completa:
+  - `GET /health` - Health check + log count
+  - `GET /logs` - Query logs with filters (level, source, limit)
+  - `GET /metrics` - Aggregated metrics by level and source
+  - `DELETE /logs` - Clear all logs
 
-### ⏳ `ndnm-exdoida` (Observability)
-- Sistema de logs agregado
-- Métricas
-- Traces distribuídos
+---
+
+## 🚧 O que NÃO está implementado (ainda)
 
 ### ⏳ `ndnm-argos` (Frontend)
 - UI visual para criação de grafos
@@ -186,11 +197,11 @@ Testa:
                      │ HTTP
                      v
       ┌──────────────────────────────────┐
-      │   ndnm-hermes (Port 3000)        │
-      │   - Descobre nodes               │
-      │   - Health checks                │
-      │   - Orquestra execução           │
-      │   - Gerencia workspaces          │
+      │   ndnm-hermes (Port 3000)        │  ←──UDP 9514─── 👀 ndnm-exdoida
+      │   - Descobre nodes               │                  (Port 3003)
+      │   - Health checks                │                  - Logs agregados
+      │   - Orquestra execução           │                  - Métricas
+      │   - Gerencia workspaces          │                  - Fire & forget
       └──────────────┬───────────────────┘
                      │ HTTP
            ┌─────────┴─────────┐
@@ -199,8 +210,11 @@ Testa:
     ┌───────────────┐   ┌───────────────┐
     │ node-file-    │   │ (outros       │
     │ browser       │   │  nodes)       │
-    │ Port 3001     │   │ Port 3003+    │
+    │ Port 3001     │   │ Port 3004+    │
     └───────────────┘   └───────────────┘
+           │                   │
+           └───UDP 9514────────┘
+                (logs)
 ```
 
 ---
@@ -208,7 +222,7 @@ Testa:
 ## 📈 Próximos Passos Sugeridos
 
 1. **~~Implementar `ndnm-brazil`~~** ✅ CONCLUÍDO!
-2. **Implementar `ndnm-exdoida`** (Observability)
+2. **~~Implementar `ndnm-exdoida`~~** ✅ CONCLUÍDO!
 3. **Lifecycle Management** (Hermes gerencia processos)
 4. **Criar mais nodes** de exemplo
 5. **Frontend `ndnm-argos`**
@@ -224,13 +238,13 @@ O sistema base está **100% funcional e testado**:
 - ✅ Execução de grafos funciona
 - ✅ Workspace persistence funciona
 - ✅ **BFF com WebSocket funciona** 🇧🇷
+- ✅ **Observability com fire-and-forget logs** 👀
 - ✅ Scripts de automação funcionam
 - ✅ Suite de testes de integração
-- ✅ **27 testes passando**
+- ✅ **37 testes passando**
 
-**Arquitetura completa (exceto frontend e observability)!** 🚀
+**Arquitetura backend completa!** 🚀
 
 Faltam apenas:
-- `ndnm-exdoida` (observability - opcional)
-- `ndnm-argos` (frontend)
+- `ndnm-argos` (frontend - em desenvolvimento pelo usuário)
 - Lifecycle management automático (nice-to-have)

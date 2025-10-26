@@ -8,6 +8,8 @@ param(
 
 $HermesUrl = "http://localhost:3000"
 $NodeUrl = "http://localhost:3001"
+$BrazilUrl = "http://localhost:3002"
+$ExdoidaUrl = "http://localhost:3003"
 
 function Show-Help {
     Write-Host ""
@@ -16,7 +18,9 @@ function Show-Help {
     Write-Host ""
     Write-Host "Health Checks:" -ForegroundColor Yellow
     Write-Host "  .\test.ps1 health-node     - Check node-file-browser health"
-    Write-Host "  .\test.ps1 health-hermes   - Check hermes health"
+    Write-Host "  .\test.ps1 health-hermes   - Check hermes health + all nodes"
+    Write-Host "  .\test.ps1 health-brazil   - Check brazil BFF health"
+    Write-Host "  .\test.ps1 health-exdoida  - Check exdoida observability health"
     Write-Host ""
     Write-Host "Registry:" -ForegroundColor Yellow
     Write-Host "  .\test.ps1 registry        - Get all registered nodes"
@@ -100,6 +104,63 @@ function Test-HealthHermes {
     } catch {
         Write-Host "Error - Hermes is not responding" -ForegroundColor Red
         Write-Host "  Make sure it's running with: cargo run -p ndnm-hermes" -ForegroundColor Yellow
+        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Test-HealthBrazil {
+    Write-Host "Checking Brazil BFF health..." -ForegroundColor Cyan
+    Write-Host ""
+
+    try {
+        $response = Invoke-RestMethod -Uri "$BrazilUrl/health" -Method Get
+
+        Write-Host "Brazil Backend-for-Frontend:" -ForegroundColor Yellow
+        Write-Host "  Status: $($response.status)" -ForegroundColor $(if ($response.status -eq "healthy") { "Green" } else { "Red" })
+        Write-Host "  Service: $($response.service)" -ForegroundColor Gray
+        Write-Host "  Hermes Connected: $($response.hermes_connected)" -ForegroundColor $(if ($response.hermes_connected) { "Green" } else { "Red" })
+        Write-Host ""
+
+        if ($response.status -eq "healthy") {
+            Write-Host "SUCCESS - Brazil BFF is healthy!" -ForegroundColor Green
+        } else {
+            Write-Host "WARNING - Brazil BFF is running but not healthy" -ForegroundColor Yellow
+        }
+
+    } catch {
+        Write-Host "Error - Brazil BFF is not responding" -ForegroundColor Red
+        Write-Host "  Make sure it's running with: cargo run -p ndnm-brazil" -ForegroundColor Yellow
+        Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
+function Test-HealthExdoida {
+    Write-Host "Checking Exdoida observability health..." -ForegroundColor Cyan
+    Write-Host ""
+
+    try {
+        $response = Invoke-RestMethod -Uri "$ExdoidaUrl/health" -Method Get
+
+        Write-Host "Exdoida Observability:" -ForegroundColor Yellow
+        Write-Host "  Status: $($response.status)" -ForegroundColor $(if ($response.status -eq "healthy") { "Green" } else { "Red" })
+        Write-Host "  Service: $($response.service)" -ForegroundColor Gray
+        Write-Host "  Logs Count: $($response.logs_count)" -ForegroundColor Gray
+        Write-Host ""
+
+        Write-Host "Additional Info:" -ForegroundColor Yellow
+        Write-Host "  HTTP API: http://localhost:3003" -ForegroundColor Gray
+        Write-Host "  UDP Logs: port 9514" -ForegroundColor Gray
+        Write-Host ""
+
+        if ($response.status -eq "healthy") {
+            Write-Host "SUCCESS - Exdoida is healthy!" -ForegroundColor Green
+        } else {
+            Write-Host "WARNING - Exdoida is running but not healthy" -ForegroundColor Yellow
+        }
+
+    } catch {
+        Write-Host "Error - Exdoida is not responding" -ForegroundColor Red
+        Write-Host "  Make sure it's running with: cargo run -p ndnm-exdoida" -ForegroundColor Yellow
         Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
@@ -419,6 +480,8 @@ function Run-IntegrationTest {
 switch ($Command.ToLower()) {
     "health-node" { Test-HealthNode }
     "health-hermes" { Test-HealthHermes }
+    "health-brazil" { Test-HealthBrazil }
+    "health-exdoida" { Test-HealthExdoida }
     "registry" { Get-Registry }
     "node-config" { Get-NodeConfig }
     "create-file" { Create-TestFile }
