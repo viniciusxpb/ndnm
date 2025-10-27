@@ -482,6 +482,15 @@ async fn main() -> Result<()> {
 - SASS (styling)
 - Path alias: `@/` → `src/`
 
+**Frontend Communication Policy (WS-only)**:
+- O frontend não usa `axios` nem chama `GET/POST` para Brazil.
+- Toda comunicação com Brazil ocorre via WebSocket (`ws://localhost:3002/ws`).
+- Brazil envia: `NODE_CONFIG` (após handshake), `EXECUTION_STATUS`, `EXECUTION_COMPLETE`, `EXECUTION_ERROR`.
+- Frontend envia: `EXECUTE_PLAY` (gatilho de execução). Mensagens futuras: `SAVE_WORKSPACE`, `LOAD_WORKSPACE`, `LIST_WORKSPACES` (quando implementadas).
+- Inicialização: Argos espera `NODE_CONFIG` após conectar; sem isso, exibe “Aguardando configuração via WebSocket (Brazil)”.
+- Remoções: `useNodeConfig` via HTTP foi removido; `useNodePalette` não faz fetch HTTP.
+- Observação: Brazil mantém HTTP para proxy com Hermes e integrações, mas o Argos não o consome diretamente.
+
 **Key Components**:
 
 ```typescript

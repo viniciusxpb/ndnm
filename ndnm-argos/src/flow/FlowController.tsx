@@ -15,12 +15,11 @@ import { FlowCanvas } from './FlowCanvas';
 
 interface FlowControllerProps {
   onReassignNodeData?: (nodes: Node[]) => Node[];
-  nodeConfig?: any;
 }
 
-export default function FlowController({ onReassignNodeData, nodeConfig }: FlowControllerProps) {
+export default function FlowController({ onReassignNodeData }: FlowControllerProps) {
   const [workspaceName, setWorkspaceName] = useState('workspace-1');
-  const nodePalette = useNodePalette(nodeConfig);
+  const nodePalette = useNodePalette();
   const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, onConnect } = useFlowStateSync();
   const { pinnedNodes, pinNode, unpinNode, isPinned } = usePinnedNodes();
   const { executeWorkflow, executionState } = useWorkflowExecution();
@@ -80,22 +79,19 @@ export default function FlowController({ onReassignNodeData, nodeConfig }: FlowC
     setNodes, 
     setEdges, 
     nodePalette,
-    onNodeValueChange: handleNodeValueChange // 🔥 PASSA A FUNÇÃO PARA USE_FLOW_INTERACTION
+    onNodeValueChange: handleNodeValueChange
   });
 
   const { saveWorkspace, loadWorkspace } = useWorkspacePersistence();
 
-  // 🔥 CORREÇÃO: Função para processar nós carregados do workspace
   const handleLoadWorkspaceFromPanel = useCallback((newNodes: Node[], newEdges: Edge[]) => {
     let processedNodes = newNodes;
     
     console.log('🔄 Carregando workspace com', newNodes.length, 'nodes e', newEdges.length, 'edges');
     
-    // Aplica o reassign das funções se disponível
     if (onReassignNodeData) {
       processedNodes = onReassignNodeData(newNodes);
     } else {
-      // Fallback: reassign local COM A FUNÇÃO CORRETA
       processedNodes = newNodes.map(node => ({
         ...node,
         data: {

@@ -40,7 +40,7 @@ export default function NodeCatalog({ onPick, nodePalette }: Props) {
           <div style={{ opacity: .7, fontSize: 12 }}>Nada encontrado…</div>
         )}
         {nodePalette.length === 0 && (
-           <div style={{ opacity: .7, fontSize: 12 }}>Carregando nodes do backend...</div>
+           <div style={{ opacity: .7, fontSize: 12 }}>Aguardando configuração via WebSocket (Brazil)...</div>
         )}
       </div>
     </div>
