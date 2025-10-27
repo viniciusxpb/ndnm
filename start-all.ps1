@@ -1,3 +1,4 @@
+param([switch]$Headless)
 # Start All NDNM Services
 # Opens each service in a separate PowerShell window
 
@@ -7,6 +8,10 @@ Write-Host ""
 # Get the project root directory
 $ProjectRoot = $PSScriptRoot
 $BackendDir = Join-Path $ProjectRoot "ndnm-backend"
+
+# Logs directory for headless mode
+$LogsDir = Join-Path $ProjectRoot ".logs"
+if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir | Out-Null }
 
 # Check if cargo is available
 try {
@@ -26,11 +31,23 @@ function Start-Service {
 
     Write-Host "Starting $Name..." -ForegroundColor Yellow
 
-    $process = Start-Process powershell -ArgumentList @(
-        "-NoExit",
-        "-Command",
-        "cd '$WorkingDir'; Write-Host '=== $Name ===' -ForegroundColor Cyan; Write-Host ''; $Command"
-    ) -PassThru
+    $outLog = Join-Path $LogsDir "$Name.out.log"
+    $errLog = Join-Path $LogsDir "$Name.err.log"
+
+    if ($Headless) {
+        $args = @(
+            "-Command",
+            "cd '$WorkingDir'; $Command"
+        )
+        $process = Start-Process powershell -ArgumentList $args -WindowStyle Hidden -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru
+    } else {
+        $args = @(
+            "-NoExit",
+            "-Command",
+            "cd '$WorkingDir'; Write-Host '=== $Name ===' -ForegroundColor Cyan; Write-Host ''; $Command"
+        )
+        $process = Start-Process powershell -ArgumentList $args -PassThru
+    }
 
     if ($process) {
         Write-Host "  [OK] $Name started (PID: $($process.Id))" -ForegroundColor Green
@@ -121,3 +138,6 @@ Write-Host "To stop all services:" -ForegroundColor Yellow
 Write-Host "  .\stop-all.ps1" -ForegroundColor White
 Write-Host ""
 Write-Host "Process IDs saved to: $pidsFile" -ForegroundColor Gray
+if ($Headless) {
+    Write-Host "Logs gravados em: $LogsDir" -ForegroundColor Gray
+}

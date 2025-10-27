@@ -668,6 +668,9 @@ yarn install
 ```powershell
 # From project root
 .\start-all.ps1
+
+# Headless mode (sem janelas, logs em .logs/)
+.\start-all.ps1 -Headless
 ```
 
 This script:

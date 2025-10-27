@@ -17,7 +17,7 @@ use anyhow::Result;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -140,6 +140,7 @@ fn create_router(state: AppState) -> Router {
         .route("/health", get(health_check))
         .route("/logs", get(get_logs))
         .route("/logs", axum::routing::delete(clear_logs))
+        .route("/logs", post(create_log))
         .route("/metrics", get(get_metrics))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
@@ -195,4 +196,20 @@ async fn main() -> Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+/// Handler for POST /logs - Ingest log entry (for frontend/browser)
+async fn create_log(State(state): State<AppState>, Json(payload): Json<CreateLogRequest>) -> StatusCode {
+    state
+        .log_store
+        .add(payload.level, payload.source, payload.message, payload.metadata);
+    StatusCode::OK
+}
+#[derive(Debug, Deserialize)]
+struct CreateLogRequest {
+    level: String,
+    source: String,
+    message: String,
+    #[serde(default)]
+    metadata: Option<serde_json::Value>,
 }
