@@ -93,8 +93,8 @@ $remaining = @($remainingCargo) + @($remainingNamed) | Select-Object -Unique
 foreach ($proc in $remaining) { Kill-IfExists -TargetPid $proc.Id }
 
 # Free common ports
-Write-Host "Liberando portas comuns (3000,3001,3002,3003,9514)..." -ForegroundColor Yellow
-foreach ($p in 3000,3001,3002,3003,9514) { Kill-ByPort -Port $p }
+Write-Host "Liberando portas comuns (3000,3001,3002,3003,9514,5173)..." -ForegroundColor Yellow
+foreach ($p in 3000,3001,3002,3003,9514,5173) { Kill-ByPort -Port $p }
 
 # Remove PID file
 Remove-Item $pidsFile -ErrorAction SilentlyContinue
