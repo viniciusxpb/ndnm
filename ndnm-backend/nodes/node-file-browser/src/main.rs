@@ -28,6 +28,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use tokio::net::TcpListener;
+use tokio::net::UdpSocket;
 use tracing::{error, info, warn};
 use walkdir::WalkDir;
 
@@ -390,6 +391,19 @@ fn create_router(node: FileBrowserNode) -> Router {
         .with_state(node)
 }
 
+async fn send_startup_log() {
+    let addr = "127.0.0.1:9514";
+    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0").await {
+        let payload = serde_json::json!({
+            "level": "info",
+            "source": "node-file-browser",
+            "message": "Node started"
+        });
+        if let Ok(bytes) = serde_json::to_vec(&payload) {
+            let _ = socket.send_to(&bytes, addr).await;
+        }
+    }
+}
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
@@ -425,6 +439,9 @@ async fn main() -> Result<()> {
 
     let addr = format!("0.0.0.0:{}", port);
     info!("Starting node server on {}", addr);
+
+    // Send startup log to Exdoida
+    tokio::spawn(send_startup_log());
 
     // Start server
     let listener = TcpListener::bind(&addr).await?;

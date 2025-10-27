@@ -8,6 +8,8 @@ use crate::storage::LogStore;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::net::UdpSocket;
+use tokio::time::Duration;
+use chrono::Utc;
 use tracing::{debug, error, warn};
 
 /// Maximum size of a UDP datagram we'll accept (64KB)
@@ -66,6 +68,33 @@ struct UdpLogMessage {
 ///     udp_server::start_udp_server(9514, log_store).await.unwrap();
 /// }
 /// ```
+fn color_for_level(level: &str) -> &str {
+    match level.to_lowercase().as_str() {
+        "info" => "\x1b[32m",
+        "warn" => "\x1b[33m",
+        "error" => "\x1b[31m",
+        "debug" => "\x1b[35m",
+        _ => "\x1b[37m",
+    }
+}
+fn print_log(level: &str, source: &str, message: &str) {
+    let ts = Utc::now().to_rfc3339();
+    let reset = "\x1b[0m";
+    let ts_color = "\x1b[36m";
+    let src_color = "\x1b[34m";
+    let lvl_color = color_for_level(level);
+    println!(
+        "{ts_color}[{ts}]{reset} {src_color}[{source}]{reset} {lvl_color}{level}{reset}: {message}",
+        ts_color = ts_color,
+        ts = ts,
+        reset = reset,
+        src_color = src_color,
+        source = source,
+        lvl_color = lvl_color,
+        level = level,
+        message = message,
+    );
+}
 pub async fn start_udp_server(
     port: u16,
     log_store: Arc<LogStore>,
@@ -92,11 +121,13 @@ pub async fn start_udp_server(
 
                         // Store the log
                         log_store.add(
-                            log_msg.level,
-                            log_msg.source,
-                            log_msg.message,
+                            log_msg.level.clone(),
+                            log_msg.source.clone(),
+                            log_msg.message.clone(),
                             log_msg.metadata,
                         );
+                        // Print colored log to console
+                        print_log(&log_msg.level, &log_msg.source, &log_msg.message);
                     }
                     Err(e) => {
                         // Log parsing errors but don't crash
@@ -113,6 +144,11 @@ pub async fn start_udp_server(
                             format!("unparsed-{}", sender),
                             format!("Failed to parse: {}", String::from_utf8_lossy(data)),
                             None,
+                        );
+                        print_log(
+                            "unknown",
+                            &format!("unparsed-{}", sender),
+                            &format!("Failed to parse: {}", String::from_utf8_lossy(data)),
                         );
                     }
                 }

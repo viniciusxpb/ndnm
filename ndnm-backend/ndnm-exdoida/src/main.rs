@@ -25,6 +25,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
+use chrono::Utc;
 
 use storage::{LogEntry, LogStore};
 
@@ -202,7 +203,9 @@ async fn main() -> Result<()> {
 async fn create_log(State(state): State<AppState>, Json(payload): Json<CreateLogRequest>) -> StatusCode {
     state
         .log_store
-        .add(payload.level, payload.source, payload.message, payload.metadata);
+        .add(payload.level.clone(), payload.source.clone(), payload.message.clone(), payload.metadata);
+    // Also print to console (timestamp + source + colored level)
+    print_log(&payload.level, &payload.source, &payload.message);
     StatusCode::OK
 }
 #[derive(Debug, Deserialize)]
@@ -212,4 +215,32 @@ struct CreateLogRequest {
     message: String,
     #[serde(default)]
     metadata: Option<serde_json::Value>,
+}
+
+fn color_for_level(level: &str) -> &str {
+    match level.to_lowercase().as_str() {
+        "info" => "\x1b[32m",   // green
+        "warn" => "\x1b[33m",   // yellow
+        "error" => "\x1b[31m",  // red
+        "debug" => "\x1b[35m",  // magenta
+        _ => "\x1b[37m",          // white
+    }
+}
+fn print_log(level: &str, source: &str, message: &str) {
+    let ts = Utc::now().to_rfc3339();
+    let reset = "\x1b[0m";
+    let ts_color = "\x1b[36m"; // cyan
+    let src_color = "\x1b[34m"; // blue
+    let lvl_color = color_for_level(level);
+    println!(
+        "{ts_color}[{ts}]{reset} {src_color}[{source}]{reset} {lvl_color}{level}{reset}: {message}",
+        ts_color = ts_color,
+        ts = ts,
+        reset = reset,
+        src_color = src_color,
+        source = source,
+        lvl_color = lvl_color,
+        level = level,
+        message = message,
+    );
 }
