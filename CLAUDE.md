@@ -678,6 +678,19 @@ This script:
 5. Opens each service in separate PowerShell window
 6. Saves PIDs to `.ndnm-pids.txt` for cleanup
 
+### Operational Protocol (Pré-alteração obrigatória)
+
+Sempre siga estes passos antes de qualquer alteração de código:
+1) Encerre todos os serviços/nodes em execução e CONFIRME que foram encerrados (`.\stop-all.ps1`).
+2) Inicie o sistema e TESTE TODOS os nodes:
+   - Hermes: `./test.ps1 health-hermes` (inclui nodes)
+   - Brazil (WS): `./test-ws.ps1` (handshake e mensagens)
+   - Nodes: enviar dados reais (ex.: `node-file-browser` criar/ler arquivo via `/run`).
+3) Encerre novamente todos os serviços (`.\stop-all.ps1`).
+4) Somente após ter CERTEZA ABSOLUTA que tudo está saudável, faça a alteração X.
+
+Observação: Este protocolo é parte das regras do projeto e deve ser seguido em toda intervenção técnica.
+
 **Option 2: Manual**
 
 ```powershell
