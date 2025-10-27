@@ -1,14 +1,14 @@
 // src/utils/logger.ts
 // Frontend logger que intercepta console e envia para node-ex-doida
 
-interface LogEntry {
+export interface LogEntry {
   timestamp: string;
   level: 'log' | 'error' | 'warn' | 'info' | 'debug';
   message: string;
   data?: any;
 }
 
-class FrontendLogger {
+export class FrontendLogger {
   private exDoIdaUrl: string;
   private originalConsole: {
     log: typeof console.log;
@@ -18,8 +18,10 @@ class FrontendLogger {
     debug: typeof console.debug;
   };
   private isEnabled: boolean = false;
+  private nodeConfig: any = null;
+  private httpEnabled: boolean = false;
 
-  constructor(exDoIdaUrl: string = 'http://localhost:3999/log') {
+  constructor(exDoIdaUrl: string = (import.meta as any)?.env?.VITE_EXDOIDA_LOG_URL || 'http://localhost:3003/log') {
     this.exDoIdaUrl = exDoIdaUrl;
 
     // Salva as funções originais do console
@@ -30,6 +32,12 @@ class FrontendLogger {
       info: console.info.bind(console),
       debug: console.debug.bind(console),
     };
+  }
+  
+  // Método para armazenar a configuração do node
+  setNodeConfig(config: any) {
+    this.nodeConfig = config;
+    this.originalConsole.info('[Logger] Node configuration updated', config);
   }
 
   /**
@@ -42,7 +50,7 @@ class FrontendLogger {
     }
 
     this.isEnabled = true;
-    this.originalConsole.log('[Logger] Initializing frontend logger -> node-ex-doida');
+    this.originalConsole.log('[Logger] Initializing frontend logger');
 
     // Intercepta console.log
     console.log = (...args: any[]) => {
@@ -94,7 +102,7 @@ class FrontendLogger {
   }
 
   /**
-   * Envia o log para o node-ex-doida
+   * Envia o log para o node-ex-doida (apenas se HTTP estiver habilitado)
    */
   private async sendLog(level: LogEntry['level'], args: any[]) {
     try {
@@ -123,7 +131,12 @@ class FrontendLogger {
         data,
       };
 
-      // Envia para node-ex-doida (fire-and-forget, não bloqueia)
+      // Se HTTP não habilitado, apenas retorna
+      if (!this.httpEnabled) {
+        return;
+      }
+
+      // Envia para backend (fire-and-forget)
       fetch(this.exDoIdaUrl, {
         method: 'POST',
         headers: {
@@ -131,9 +144,7 @@ class FrontendLogger {
         },
         body: JSON.stringify(entry),
       }).catch(err => {
-        // Falha silenciosa - não queremos quebrar a aplicação por causa de logs
-        // Mas usa o console original para debug
-        this.originalConsole.error('[Logger] Failed to send log to node-ex-doida:', err);
+        this.originalConsole.error('[Logger] Failed to send log:', err);
       });
     } catch (err) {
       this.originalConsole.error('[Logger] Error in sendLog:', err);
@@ -152,11 +163,12 @@ class FrontendLogger {
 export const frontendLogger = new FrontendLogger();
 
 // Auto-inicializa em desenvolvimento
-if (import.meta.env.DEV) {
-  // Pequeno delay para garantir que tudo carregou
+if ((import.meta as any)?.env?.DEV) {
   setTimeout(() => {
     frontendLogger.init();
   }, 100);
 }
 
+// Exportação para compatibilidade com as importações
+export const logger = frontendLogger;
 export default frontendLogger;

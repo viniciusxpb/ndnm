@@ -13,13 +13,14 @@ import { usePinnedNodes } from '@/hooks/usePinnedNodes';
 import { useWorkflowExecution } from '@/hooks/useWorkflowExecution';
 import { FlowCanvas } from './FlowCanvas';
 
-type FlowControllerProps = {
+interface FlowControllerProps {
   onReassignNodeData?: (nodes: Node[]) => Node[];
-};
+  nodeConfig?: any;
+}
 
-export default function FlowController({ onReassignNodeData }: FlowControllerProps) {
+export default function FlowController({ onReassignNodeData, nodeConfig }: FlowControllerProps) {
   const [workspaceName, setWorkspaceName] = useState('workspace-1');
-  const nodePalette = useNodePalette();
+  const nodePalette = useNodePalette(nodeConfig);
   const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, onConnect } = useFlowStateSync();
   const { pinnedNodes, pinNode, unpinNode, isPinned } = usePinnedNodes();
   const { executeWorkflow, executionState } = useWorkflowExecution();
