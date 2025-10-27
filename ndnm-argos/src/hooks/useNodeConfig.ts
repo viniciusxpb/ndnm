@@ -27,12 +27,12 @@ export function useNodeConfig() {
               window.frontendLogger.setNodeConfig(fileBrowserConfig);
             }
           } else {
-            setError('Configuração do node-file-browser não encontrada');
+            setError(new Error('Configuração do node-file-browser não encontrada'));
             console.error('Configuração do node-file-browser não encontrada');
           }
         }
       } catch (error) {
-        setError('Erro ao carregar configuração do node');
+        setError(new Error('Erro ao carregar configuração do node'));
         console.error('Erro ao carregar configuração do node', error);
       } finally {
         setLoading(false);
