@@ -65,3 +65,22 @@ VITE_NODE_CONFIG_PATH=/nodes/registry
 - Implementar testes automatizados para validar a integração
 - Melhorar o tratamento de erros na comunicação entre frontend e backend
 - Adicionar suporte para mais tipos de nodes
+
+## Comando de Reset e Execução
+
+Para matar quaisquer nodes/serviços que estejam rodando, reiniciar todo o backend do zero e iniciar o frontend em uma nova janela, use:
+
+```
+# Na raiz do projeto (c:\Projetos\new\ndnm)
+.\start.ps1
+```
+
+- Para executar sem abrir o frontend (apenas backend):
+```
+.\start.ps1 -NoFrontend
+```
+
+Observações:
+- Este script chama `stop-all.ps1` para encerrar processos e `start-all.ps1` para iniciar Hermes, Brazil, Exdoida e nodes.
+- O frontend é iniciado com `npm run dev` em uma nova janela do PowerShell.
+- Em PowerShell, para encadear comandos use `;` (não `&&`).
