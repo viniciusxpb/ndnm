@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::cors::Any;
 use tracing::info;
 use chrono::Utc;
 
@@ -137,13 +138,18 @@ async fn clear_logs(State(state): State<AppState>) -> StatusCode {
 
 /// Create the HTTP API router
 fn create_router(state: AppState) -> Router {
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     Router::new()
         .route("/health", get(health_check))
         .route("/logs", get(get_logs))
         .route("/logs", axum::routing::delete(clear_logs))
         .route("/logs", post(create_log))
         .route("/metrics", get(get_metrics))
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }

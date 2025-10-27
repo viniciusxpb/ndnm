@@ -1,11 +1,10 @@
 param([switch]$Headless)
-# Start All NDNM Services
-# Opens each service in a separate PowerShell window
+# Start All NDNM Services (single window backend)
+# Backend inicia e permanece em UMA janela. Se qualquer serviço encerrar, todos são finalizados.
 
-Write-Host "Starting NDNM System..." -ForegroundColor Cyan
+Write-Host "Starting NDNM System (single window)..." -ForegroundColor Cyan
 Write-Host ""
 
-# Get the project root directory
 $ProjectRoot = $PSScriptRoot
 $BackendDir = Join-Path $ProjectRoot "ndnm-backend"
 
@@ -13,131 +12,138 @@ $BackendDir = Join-Path $ProjectRoot "ndnm-backend"
 $LogsDir = Join-Path $ProjectRoot ".logs"
 if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir | Out-Null }
 
-# Check if cargo is available
-try {
-    $null = Get-Command cargo -ErrorAction Stop
-} catch {
+# Ensure cargo exists
+try { $null = Get-Command cargo -ErrorAction Stop } catch {
     Write-Host "Error: Cargo not found. Make sure Rust is installed." -ForegroundColor Red
     exit 1
 }
 
-# Function to start a service in a new window
-function Start-Service {
+# Helpers: Port check/cleanup
+function Get-PortOwnerPid {
+    param([int]$Port)
+    try {
+        $conn = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+        if ($conn) { return $conn.OwningProcess } else { return $null }
+    } catch { return $null }
+}
+
+function Ensure-Port-Free {
+    param([int]$Port,[string]$ServiceName)
+    $ownerPid = Get-PortOwnerPid -Port $Port
+    if ($ownerPid) {
+        Write-Host "[WARN] Porta $Port ocupada antes de iniciar $ServiceName (PID: $ownerPid). Tentando liberar..." -ForegroundColor Yellow
+        try { Stop-Process -Id $ownerPid -Force -ErrorAction SilentlyContinue; Write-Host "  [OK] Porta $Port liberada." -ForegroundColor Green }
+        catch { Write-Host "  [FAIL] Não foi possível liberar porta ${Port}: $($_.Exception.Message)" -ForegroundColor Red }
+    }
+}
+
+# Start cargo process in same window
+function Start-BackendProc {
     param(
         [string]$Name,
         [string]$WorkingDir,
-        [string]$Command
+        [string[]]$CargoArgs,
+        [int]$PortToCheck
     )
 
-    Write-Host "Starting $Name..." -ForegroundColor Yellow
+    if ($PortToCheck -gt 0) { Ensure-Port-Free -Port $PortToCheck -ServiceName $Name }
 
+    Write-Host "=== $Name ===" -ForegroundColor Cyan
     $outLog = Join-Path $LogsDir "$Name.out.log"
     $errLog = Join-Path $LogsDir "$Name.err.log"
 
     if ($Headless) {
-        $args = @(
-            "-Command",
-            "cd '$WorkingDir'; $Command"
-        )
-        $process = Start-Process powershell -ArgumentList $args -WindowStyle Hidden -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru
+        # Headless: redireciona para arquivos de log
+        $proc = Start-Process -FilePath "cargo" -ArgumentList $CargoArgs -WorkingDirectory $WorkingDir -RedirectStandardOutput $outLog -RedirectStandardError $errLog -PassThru
     } else {
-        $args = @(
-            "-NoExit",
-            "-Command",
-            "cd '$WorkingDir'; Write-Host '=== $Name ===' -ForegroundColor Cyan; Write-Host ''; $Command"
-        )
-        $process = Start-Process powershell -ArgumentList $args -PassThru
+        # Única janela: sem redirecionar, outputs entram nesta janela
+        $proc = Start-Process -FilePath "cargo" -ArgumentList $CargoArgs -WorkingDirectory $WorkingDir -NoNewWindow -PassThru
     }
 
-    if ($process) {
-        Write-Host "  [OK] $Name started (PID: $($process.Id))" -ForegroundColor Green
-        return $process.Id
+    if ($proc) {
+        Write-Host "  [OK] $Name started (PID: $($proc.Id))" -ForegroundColor Green
+        return $proc
     } else {
         Write-Host "  [FAIL] Failed to start $Name" -ForegroundColor Red
         return $null
     }
 }
 
-# Array to store PIDs
-$pids = @()
+# PIDs/procs tracking
+$procs = New-Object System.Collections.ArrayList
+$pidsFile = Join-Path $ProjectRoot ".ndnm-pids.txt"
 
-# Start Hermes first
-Write-Host ""
-Write-Host "Step 1: Starting Hermes Orchestrator" -ForegroundColor Cyan
-Write-Host "======================================" -ForegroundColor Cyan
-$hermesPid = Start-Service -Name "Hermes" -WorkingDir $BackendDir -Command "cargo run -p ndnm-hermes"
-if ($hermesPid) {
-    $pids += $hermesPid
-}
+# Start order: Hermes -> Brazil -> Exdoida -> Nodes
+Write-Host ""; Write-Host "Step 1: Starting Hermes Orchestrator" -ForegroundColor Cyan
+$hermes = Start-BackendProc -Name "Hermes" -WorkingDir $BackendDir -CargoArgs @("run","-p","ndnm-hermes") -PortToCheck 3000
+if ($hermes) { [void]$procs.Add($hermes) }
 Start-Sleep -Seconds 2
 
-# Start Brazil BFF
-Write-Host ""
-Write-Host "Step 2: Starting Brazil BFF" -ForegroundColor Cyan
-Write-Host "============================" -ForegroundColor Cyan
-$brazilPid = Start-Service -Name "Brazil" -WorkingDir $BackendDir -Command "cargo run -p ndnm-brazil"
-if ($brazilPid) {
-    $pids += $brazilPid
-}
+Write-Host ""; Write-Host "Step 2: Starting Brazil BFF" -ForegroundColor Cyan
+$brazil = Start-BackendProc -Name "Brazil" -WorkingDir $BackendDir -CargoArgs @("run","-p","ndnm-brazil") -PortToCheck 3002
+if ($brazil) { [void]$procs.Add($brazil) }
 Start-Sleep -Seconds 2
 
-# Start Exdoida Observability
-Write-Host ""
-Write-Host "Step 3: Starting Exdoida Observability" -ForegroundColor Cyan
-Write-Host "=======================================" -ForegroundColor Cyan
-$exdoidaPid = Start-Service -Name "Exdoida" -WorkingDir $BackendDir -Command "cargo run -p ndnm-exdoida"
-if ($exdoidaPid) {
-    $pids += $exdoidaPid
-}
+Write-Host ""; Write-Host "Step 3: Starting Exdoida Observability" -ForegroundColor Cyan
+$exdoida = Start-BackendProc -Name "Exdoida" -WorkingDir $BackendDir -CargoArgs @("run","-p","ndnm-exdoida") -PortToCheck 3003
+if ($exdoida) { [void]$procs.Add($exdoida) }
 Start-Sleep -Seconds 2
 
-# Discover nodes
-Write-Host ""
-Write-Host "Step 4: Discovering and Starting Nodes" -ForegroundColor Cyan
-Write-Host "=======================================" -ForegroundColor Cyan
-
+Write-Host ""; Write-Host "Step 4: Discovering and Starting Nodes" -ForegroundColor Cyan
 $nodesDir = Join-Path $BackendDir "nodes"
 if (Test-Path $nodesDir) {
     $nodeDirectories = Get-ChildItem -Path $nodesDir -Directory
-
     foreach ($nodeDir in $nodeDirectories) {
         $configPath = Join-Path $nodeDir.FullName "config.yaml"
-
         if (Test-Path $configPath) {
             $nodeName = $nodeDir.Name
-            $nodePid = Start-Service -Name $nodeName -WorkingDir $nodeDir.FullName -Command "cargo run"
-
-            if ($nodePid) {
-                $pids += $nodePid
-            }
-
+            # Port check for known nodes
+            $port = if ($nodeName -eq "node-file-browser") { 3001 } else { 0 }
+            $nodeProc = Start-BackendProc -Name $nodeName -WorkingDir $nodeDir.FullName -CargoArgs @("run") -PortToCheck $port
+            if ($nodeProc) { [void]$procs.Add($nodeProc) }
             Start-Sleep -Seconds 1
         }
     }
 }
 
-# Save PIDs to file for stop-all.ps1
-$pidsFile = Join-Path $ProjectRoot ".ndnm-pids.txt"
-$pids | Out-File -FilePath $pidsFile -Encoding UTF8
+# Save PIDs
+$procs | ForEach-Object { $_.Id } | Out-File -FilePath $pidsFile -Encoding UTF8
 
-Write-Host ""
-Write-Host "=======================================" -ForegroundColor Cyan
+# Register cascading shutdown: if any exits, kill the rest
+foreach ($proc in $procs) {
+    try {
+        $proc.EnableRaisingEvents = $true
+        Register-ObjectEvent -InputObject $proc -EventName Exited -SourceIdentifier "ndnm-exit-$($proc.Id)" -Action {
+            try {
+                $pf = Join-Path $PSScriptRoot ".ndnm-pids.txt"
+                if (Test-Path $pf) {
+                    $ids = Get-Content $pf | ForEach-Object { [int]$_ }
+                    foreach ($id in $ids) {
+                        if ($id -ne $event.Sender.Id) {
+                            try { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue } catch {}
+                        }
+                    }
+                }
+            } finally {
+                Write-Host "[EXIT] $($event.Sender.ProcessName) saiu. Encerrando backend." -ForegroundColor Red
+            }
+        } | Out-Null
+    } catch {}
+}
+
+Write-Host ""; Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host "NDNM System Started Successfully!" -ForegroundColor Green
 Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Services running:" -ForegroundColor Yellow
+Write-Host ""; Write-Host "Services running:" -ForegroundColor Yellow
 Write-Host "  - Hermes: http://localhost:3000" -ForegroundColor White
 Write-Host "  - Brazil: http://localhost:3002 (WebSocket: ws://localhost:3002/ws)" -ForegroundColor White
 Write-Host "  - Exdoida: http://localhost:3003 (UDP Logs: port 9514)" -ForegroundColor White
-Write-Host "  - Nodes: Check individual windows" -ForegroundColor White
-Write-Host ""
-Write-Host "To test the system:" -ForegroundColor Yellow
-Write-Host "  .\test.ps1 health-hermes" -ForegroundColor White
-Write-Host ""
-Write-Host "To stop all services:" -ForegroundColor Yellow
-Write-Host "  .\stop-all.ps1" -ForegroundColor White
-Write-Host ""
-Write-Host "Process IDs saved to: $pidsFile" -ForegroundColor Gray
-if ($Headless) {
-    Write-Host "Logs gravados em: $LogsDir" -ForegroundColor Gray
+Write-Host "  - Nodes: node-file-browser em http://localhost:3001" -ForegroundColor White
+if ($Headless) { Write-Host "Logs gravados em: $LogsDir" -ForegroundColor Gray }
+
+# Keep this window attached to backend lifecycle
+$idsToWait = $procs | ForEach-Object { $_.Id }
+if ($idsToWait.Count -gt 0) {
+    Write-Host "Aguardando backend (Ctrl+C para encerrar manualmente)..." -ForegroundColor Gray
+    try { Wait-Process -Id $idsToWait } catch {}
 }
